@@ -1,3 +1,4 @@
+const BASE_URL = "http://localhost:5000"; // 🔁 Use your Render/Netlify URL in production
 let token = "";
 let page = 1;
 const limit = 5;
@@ -7,27 +8,34 @@ async function login() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  const res = await fetch("/api/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
+  try {
+    const res = await fetch(`${BASE_URL}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
 
-  const data = await res.json();
-  if (data.token) {
-    token = data.token;
-    alert("Logged in successfully");
-    fetchProducts();
-    fetchCart();
-  } else {
-    alert("Login failed");
+    const data = await res.json();
+    console.log("Login Response:", data);
+
+    if (data.token) {
+      token = data.token;
+      alert("Logged in successfully");
+      fetchProducts();
+      fetchCart();
+    } else {
+      alert("Login failed");
+    }
+  } catch (error) {
+    console.error("Error during login:", error);
+    alert("Login failed due to network or server error.");
   }
 }
 
 // Fetch products with search and pagination
 async function fetchProducts() {
-  const search = document.getElementById("search").value;
-  let url = `/api/products?page=${page}&limit=${limit}`;
+  const search = document.getElementById("search")?.value || "";
+  let url = `${BASE_URL}/api/products?page=${page}&limit=${limit}`;
   if (search) {
     url += `&search=${search}`;
   }
@@ -49,6 +57,7 @@ async function fetchProducts() {
   });
 }
 
+// Pagination handlers
 function nextPage() {
   page++;
   fetchProducts();
@@ -61,8 +70,9 @@ function prevPage() {
   }
 }
 
+// Add to Cart
 async function addToCart(productId) {
-  const res = await fetch("/api/cart", {
+  const res = await fetch(`${BASE_URL}/api/cart`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -76,8 +86,9 @@ async function addToCart(productId) {
   fetchCart();
 }
 
+// Fetch Cart
 async function fetchCart() {
-  const res = await fetch("/api/cart", {
+  const res = await fetch(`${BASE_URL}/api/cart`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -87,7 +98,7 @@ async function fetchCart() {
   const cartDiv = document.getElementById("cart");
   cartDiv.innerHTML = "<h3>Your Cart</h3>";
 
-  if (cart.items.length === 0) {
+  if (!cart.items || cart.items.length === 0) {
     cartDiv.innerHTML += "<p>Your cart is empty.</p>";
     return;
   }
@@ -108,10 +119,11 @@ async function fetchCart() {
   cartDiv.innerHTML += `<br><button onclick="placeOrder()">Place Order</button>`;
 }
 
+// Update quantity
 async function updateCart(itemId, quantity) {
   if (quantity < 1) return;
 
-  const res = await fetch(`/api/cart/${itemId}`, {
+  const res = await fetch(`${BASE_URL}/api/cart/${itemId}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -125,8 +137,9 @@ async function updateCart(itemId, quantity) {
   fetchCart();
 }
 
+// Remove from cart
 async function removeFromCart(itemId) {
-  const res = await fetch(`/api/cart/${itemId}`, {
+  const res = await fetch(`${BASE_URL}/api/cart/${itemId}`, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -138,8 +151,9 @@ async function removeFromCart(itemId) {
   fetchCart();
 }
 
+// Place order
 async function placeOrder() {
-  const res = await fetch("/api/orders", {
+  const res = await fetch(`${BASE_URL}/api/orders`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -150,3 +164,15 @@ async function placeOrder() {
   alert(data.message || "Order placed successfully");
   fetchCart();
 }
+
+// ✅ Expose functions to HTML
+window.login = login;
+window.fetchProducts = fetchProducts;
+window.fetchCart = fetchCart;
+window.addToCart = addToCart;
+window.updateCart = updateCart;
+window.removeFromCart = removeFromCart;
+window.placeOrder = placeOrder;
+window.nextPage = nextPage;
+window.prevPage = prevPage;
+
